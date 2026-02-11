@@ -1,0 +1,115 @@
+{
+  "name": "mcp-manager",
+  "displayName": "MCP Manager",
+  "description": "Manage Claude Code MCP server configurations from VS Code sidebar",
+  "version": "0.1.0",
+  "publisher": "claritas",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mcp-manager",
+          "title": "MCP Manager",
+          "icon": "media/mcp-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "mcp-manager": [
+        {
+          "id": "mcpServersView",
+          "name": "MCP Servers",
+          "when": "true"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "mcpServersView",
+        "contents": "No MCP servers found.\n\nCreate a `.mcp.json` file in your workspace root or configure servers in `~/.claude.json`.\n[Learn More](https://docs.anthropic.com/en/docs/claude-code)",
+        "when": "!mcpManager.hasServers"
+      }
+    ],
+    "commands": [
+      {
+        "command": "mcpManager.refresh",
+        "title": "Refresh MCP Servers",
+        "icon": "$(refresh)",
+        "category": "MCP Manager"
+      },
+      {
+        "command": "mcpManager.enableServer",
+        "title": "Enable Server",
+        "category": "MCP Manager"
+      },
+      {
+        "command": "mcpManager.disableServer",
+        "title": "Disable Server",
+        "category": "MCP Manager"
+      },
+      {
+        "command": "mcpManager.editConfig",
+        "title": "Edit Config File",
+        "icon": "$(edit)",
+        "category": "MCP Manager"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "mcpManager.refresh",
+          "when": "view == mcpServersView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "mcpManager.enableServer",
+          "when": "view == mcpServersView && viewItem == mcpServer.disabled",
+          "group": "inline"
+        },
+        {
+          "command": "mcpManager.disableServer",
+          "when": "view == mcpServersView && viewItem == mcpServer.enabled",
+          "group": "inline"
+        },
+        {
+          "command": "mcpManager.enableServer",
+          "when": "view == mcpServersView && viewItem == mcpServer.disabled",
+          "group": "1_toggle"
+        },
+        {
+          "command": "mcpManager.disableServer",
+          "when": "view == mcpServersView && viewItem == mcpServer.enabled",
+          "group": "1_toggle"
+        },
+        {
+          "command": "mcpManager.editConfig",
+          "when": "view == mcpServersView && viewItem =~ /^mcpServer\\./",
+          "group": "2_config"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.7.0"
+  }
+}
