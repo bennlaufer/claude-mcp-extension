@@ -10,6 +10,7 @@ const {
   mockCacheKey,
   mockGetAllServers,
   mockSettingsGetAll,
+  mockClaudeCodeSettingsGetAll,
 } = vi.hoisted(() => ({
   mockFireEvent: vi.fn(),
   mockExecuteCommand: vi.fn(),
@@ -20,6 +21,9 @@ const {
   mockSettingsGetAll: vi.fn().mockResolvedValue({
     autoHealthCheck: "all",
     healthCheckTimeoutMs: 15000,
+  }),
+  mockClaudeCodeSettingsGetAll: vi.fn().mockResolvedValue({
+    toolSearchMode: "auto",
   }),
 }));
 
@@ -92,11 +96,24 @@ vi.mock("../services/settingsService", () => ({
   },
 }));
 
+// --- Mock ClaudeCodeSettingsService ---
+vi.mock("../services/claudeCodeSettingsService", () => ({
+  ClaudeCodeSettingsService: class MockClaudeCodeSettingsService {
+    getAll = mockClaudeCodeSettingsGetAll;
+    get = vi.fn().mockImplementation(async (key: string) => {
+      const all = await mockClaudeCodeSettingsGetAll();
+      return (all as any)[key];
+    });
+    set = vi.fn();
+  },
+}));
+
 import { McpTreeDataProvider } from "./mcpTreeDataProvider";
-import { McpGroupItem, McpServerItem, SettingsGroupItem, SettingItem } from "../models/mcpItems";
+import { McpGroupItem, McpServerItem, SettingsGroupItem, SettingItem, ClaudeCodeSettingItem } from "../models/mcpItems";
 import { ConfigService } from "../services/configService";
 import { HealthCheckService } from "../services/healthCheckService";
 import { SettingsService } from "../services/settingsService";
+import { ClaudeCodeSettingsService } from "../services/claudeCodeSettingsService";
 
 // --- Fixtures ---
 
@@ -127,6 +144,7 @@ describe("McpTreeDataProvider", () => {
   let configService: ConfigService;
   let healthService: HealthCheckService;
   let settingsService: SettingsService;
+  let claudeCodeSettingsService: ClaudeCodeSettingsService;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -134,10 +152,14 @@ describe("McpTreeDataProvider", () => {
       autoHealthCheck: "all",
       healthCheckTimeoutMs: 15000,
     });
+    mockClaudeCodeSettingsGetAll.mockResolvedValue({
+      toolSearchMode: "auto",
+    });
     configService = new ConfigService();
     healthService = new HealthCheckService();
     settingsService = new SettingsService();
-    provider = new McpTreeDataProvider(configService, healthService, settingsService);
+    claudeCodeSettingsService = new ClaudeCodeSettingsService();
+    provider = new McpTreeDataProvider(configService, healthService, settingsService, claudeCodeSettingsService);
   });
 
   // ─── refresh ──────────────────────────────────────────
@@ -547,7 +569,7 @@ describe("McpTreeDataProvider", () => {
       expect(roots[0]).toBeInstanceOf(SettingsGroupItem);
     });
 
-    it("SettingsGroupItem children return SettingItem for each setting definition", async () => {
+    it("SettingsGroupItem children return SettingItem and ClaudeCodeSettingItem", async () => {
       mockGetAllServers.mockResolvedValue([]);
 
       await provider.refresh();
@@ -556,9 +578,10 @@ describe("McpTreeDataProvider", () => {
       const settingsGroup = roots.find((r) => r instanceof SettingsGroupItem)!;
       const children = provider.getChildren(settingsGroup);
 
-      expect(children).toHaveLength(2);
+      expect(children).toHaveLength(3);
       expect(children[0]).toBeInstanceOf(SettingItem);
       expect(children[1]).toBeInstanceOf(SettingItem);
+      expect(children[2]).toBeInstanceOf(ClaudeCodeSettingItem);
     });
 
     it("SettingItem descriptions reflect cached settings values", async () => {
@@ -599,6 +622,41 @@ describe("McpTreeDataProvider", () => {
 
       const timeout = children.find((c) => c.settingKey === "healthCheckTimeoutMs")!;
       expect(timeout.description).toBe("5000");
+    });
+
+    it("ClaudeCodeSettingItem appears with correct description", async () => {
+      mockGetAllServers.mockResolvedValue([]);
+
+      await provider.refresh();
+
+      const roots = provider.getChildren();
+      const settingsGroup = roots.find((r) => r instanceof SettingsGroupItem)!;
+      const children = provider.getChildren(settingsGroup);
+      const ccItem = children.find((c) => c instanceof ClaudeCodeSettingItem) as ClaudeCodeSettingItem;
+
+      expect(ccItem).toBeDefined();
+      expect(ccItem.settingKey).toBe("toolSearchMode");
+      expect(ccItem.description).toBe("auto");
+    });
+
+    it("after refresh with changed Claude Code settings, description updates", async () => {
+      mockGetAllServers.mockResolvedValue([]);
+
+      await provider.refresh();
+
+      // Change Claude Code settings
+      mockClaudeCodeSettingsGetAll.mockResolvedValue({
+        toolSearchMode: "true",
+      });
+
+      await provider.refresh();
+
+      const roots = provider.getChildren();
+      const settingsGroup = roots.find((r) => r instanceof SettingsGroupItem)!;
+      const children = provider.getChildren(settingsGroup);
+      const ccItem = children.find((c) => c instanceof ClaudeCodeSettingItem) as ClaudeCodeSettingItem;
+
+      expect(ccItem.description).toBe("true");
     });
 
     it("runTier1Checks uses cached autoHealthCheck setting", async () => {

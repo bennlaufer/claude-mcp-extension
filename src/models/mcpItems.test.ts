@@ -36,7 +36,7 @@ vi.mock("vscode", () => ({
   Uri: { parse: vi.fn((s: string) => ({ scheme: "mcp-health", path: s })) },
 }));
 
-import { McpServerItem, McpGroupItem, SettingsGroupItem, SettingItem } from "./mcpItems";
+import { McpServerItem, McpGroupItem, SettingsGroupItem, SettingItem, ClaudeCodeSettingItem } from "./mcpItems";
 
 // --- Test fixtures ---
 
@@ -581,5 +581,48 @@ describe("SettingItem", () => {
   it("sets iconPath to ThemeIcon('settings-gear')", () => {
     const item = new SettingItem("autoHealthCheck", "Auto Health Check", "all");
     expect((item.iconPath as any).id).toBe("settings-gear");
+  });
+});
+
+// --- ClaudeCodeSettingItem tests ---
+
+describe("ClaudeCodeSettingItem", () => {
+  it("sets label from parameter", () => {
+    const item = new ClaudeCodeSettingItem("toolSearchMode", "Tool Search", "auto");
+    expect(item.label).toBe("Tool Search");
+  });
+
+  it("sets collapsibleState to None", () => {
+    const item = new ClaudeCodeSettingItem("toolSearchMode", "Tool Search", "auto");
+    expect(item.collapsibleState).toBe(0); // None
+  });
+
+  it("sets contextValue to 'claudeCodeSettingItem'", () => {
+    const item = new ClaudeCodeSettingItem("toolSearchMode", "Tool Search", "auto");
+    expect(item.contextValue).toBe("claudeCodeSettingItem");
+  });
+
+  it("sets description to current value", () => {
+    const item = new ClaudeCodeSettingItem("toolSearchMode", "Tool Search", "true");
+    expect(item.description).toBe("true");
+  });
+
+  it("sets command with correct command name and arguments", () => {
+    const item = new ClaudeCodeSettingItem("toolSearchMode", "Tool Search", "auto");
+    expect(item.command).toEqual({
+      command: "mcpManager.editClaudeCodeSetting",
+      title: "Edit Claude Code Setting",
+      arguments: ["toolSearchMode"],
+    });
+  });
+
+  it("exposes settingKey as public property", () => {
+    const item = new ClaudeCodeSettingItem("toolSearchMode", "Tool Search", "auto");
+    expect(item.settingKey).toBe("toolSearchMode");
+  });
+
+  it("sets iconPath to ThemeIcon('symbol-variable')", () => {
+    const item = new ClaudeCodeSettingItem("toolSearchMode", "Tool Search", "auto");
+    expect((item.iconPath as any).id).toBe("symbol-variable");
   });
 });

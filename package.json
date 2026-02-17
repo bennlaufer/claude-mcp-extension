@@ -78,6 +78,12 @@
         "title": "Edit Setting",
         "icon": "$(edit)",
         "category": "MCP Manager"
+      },
+      {
+        "command": "mcpManager.editClaudeCodeSetting",
+        "title": "Edit Claude Code Setting",
+        "icon": "$(edit)",
+        "category": "MCP Manager"
       }
     ],
     "menus": {
@@ -132,6 +138,11 @@
         {
           "command": "mcpManager.editSetting",
           "when": "view == mcpServersView && viewItem == settingItem",
+          "group": "inline"
+        },
+        {
+          "command": "mcpManager.editClaudeCodeSetting",
+          "when": "view == mcpServersView && viewItem == claudeCodeSettingItem",
           "group": "inline"
         }
       ]

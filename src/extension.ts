@@ -1,16 +1,18 @@
 import * as vscode from "vscode";
 import { ConfigService } from "./services/configService";
 import { SettingsService } from "./services/settingsService";
+import { ClaudeCodeSettingsService } from "./services/claudeCodeSettingsService";
 import { HealthCheckService } from "./services/healthCheckService";
 import { McpTreeDataProvider } from "./providers/mcpTreeDataProvider";
 import { McpServerItem } from "./models/mcpItems";
-import { HealthStatus, McpManagerSettings, SETTING_DEFINITIONS } from "./types";
+import { HealthStatus, McpManagerSettings, SETTING_DEFINITIONS, ClaudeCodeSettings, CLAUDE_CODE_SETTING_DEFINITIONS } from "./types";
 
 export function activate(context: vscode.ExtensionContext) {
   const configService = new ConfigService();
   const settingsService = new SettingsService();
+  const claudeCodeSettingsService = new ClaudeCodeSettingsService();
   const healthService = new HealthCheckService(settingsService);
-  const treeDataProvider = new McpTreeDataProvider(configService, healthService, settingsService);
+  const treeDataProvider = new McpTreeDataProvider(configService, healthService, settingsService, claudeCodeSettingsService);
 
   // Create TreeView with manual checkbox management
   const treeView = vscode.window.createTreeView("mcpServersView", {
@@ -137,6 +139,25 @@ export function activate(context: vscode.ExtensionContext) {
           await settingsService.set(settingKey, parseInt(input, 10) as any);
           await treeDataProvider.refresh();
         }
+      }
+    }),
+
+    vscode.commands.registerCommand("mcpManager.editClaudeCodeSetting", async (settingKey: keyof ClaudeCodeSettings) => {
+      const def = CLAUDE_CODE_SETTING_DEFINITIONS.find(d => d.key === settingKey);
+      if (!def) return;
+
+      const currentValue = await claudeCodeSettingsService.get(settingKey);
+      const pick = await vscode.window.showQuickPick(
+        def.options.map(o => ({
+          ...o,
+          picked: o.label === String(currentValue),
+        })),
+        { placeHolder: def.description }
+      );
+      if (pick) {
+        await claudeCodeSettingsService.set(settingKey, pick.label as any);
+        await treeDataProvider.refresh();
+        showRestartNotification();
       }
     }),
   );

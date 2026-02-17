@@ -168,6 +168,40 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
   },
 ];
 
+// --- Claude Code settings types ---
+
+export interface ClaudeCodeSettings {
+  toolSearchMode: "auto" | "true" | "false";
+}
+
+export const CLAUDE_CODE_SETTINGS_DEFAULTS: ClaudeCodeSettings = {
+  toolSearchMode: "auto",
+};
+
+export interface ClaudeCodeSettingDefinition<K extends keyof ClaudeCodeSettings = keyof ClaudeCodeSettings> {
+  key: K;
+  label: string;
+  description: string;
+  type: "enum";
+  options: { label: string; description: string }[];
+  envVar: string;
+}
+
+export const CLAUDE_CODE_SETTING_DEFINITIONS: ClaudeCodeSettingDefinition[] = [
+  {
+    key: "toolSearchMode",
+    label: "Tool Search",
+    description: "When to activate MCP tool search (reduces context usage)",
+    type: "enum",
+    options: [
+      { label: "auto", description: "Enable when context window reaches 10% capacity (default)" },
+      { label: "true", description: "Always enabled (recommended)" },
+      { label: "false", description: "Disabled — all tool definitions loaded upfront" },
+    ],
+    envVar: "ENABLE_TOOL_SEARCH",
+  },
+];
+
 // --- Health check types ---
 
 export enum HealthStatus {

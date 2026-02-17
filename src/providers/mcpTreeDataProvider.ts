@@ -1,11 +1,12 @@
 import * as vscode from "vscode";
-import { McpServerEntry, McpScope, HealthStatus, HealthCheckResult, McpManagerSettings, SETTINGS_DEFAULTS, SETTING_DEFINITIONS, isHttpConfig } from "../types";
-import { McpGroupItem, McpServerItem, SettingsGroupItem, SettingItem } from "../models/mcpItems";
+import { McpServerEntry, McpScope, HealthStatus, HealthCheckResult, McpManagerSettings, SETTINGS_DEFAULTS, SETTING_DEFINITIONS, ClaudeCodeSettings, CLAUDE_CODE_SETTINGS_DEFAULTS, CLAUDE_CODE_SETTING_DEFINITIONS, isHttpConfig } from "../types";
+import { McpGroupItem, McpServerItem, SettingsGroupItem, SettingItem, ClaudeCodeSettingItem } from "../models/mcpItems";
 import { ConfigService } from "../services/configService";
 import { HealthCheckService } from "../services/healthCheckService";
 import { SettingsService } from "../services/settingsService";
+import { ClaudeCodeSettingsService } from "../services/claudeCodeSettingsService";
 
-type TreeItem = McpGroupItem | McpServerItem | SettingsGroupItem | SettingItem;
+type TreeItem = McpGroupItem | McpServerItem | SettingsGroupItem | SettingItem | ClaudeCodeSettingItem;
 
 /** Scope display order */
 const SCOPE_ORDER: McpScope[] = ["project", "user", "local", "managed"];
@@ -17,20 +18,24 @@ export class McpTreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
   private servers: McpServerEntry[] = [];
   private healthResults = new Map<string, HealthCheckResult>();
   private cachedSettings: McpManagerSettings = { ...SETTINGS_DEFAULTS };
+  private cachedClaudeCodeSettings: ClaudeCodeSettings = { ...CLAUDE_CODE_SETTINGS_DEFAULTS };
 
   constructor(
     private readonly configService: ConfigService,
     private readonly healthService: HealthCheckService,
     private readonly settingsService: SettingsService,
+    private readonly claudeCodeSettingsService: ClaudeCodeSettingsService,
   ) {}
 
   async refresh(): Promise<void> {
-    const [servers, settings] = await Promise.all([
+    const [servers, settings, claudeCodeSettings] = await Promise.all([
       this.configService.getAllServers(),
       this.settingsService.getAll(),
+      this.claudeCodeSettingsService.getAll(),
     ]);
     this.servers = servers;
     this.cachedSettings = settings;
+    this.cachedClaudeCodeSettings = claudeCodeSettings;
     vscode.commands.executeCommand(
       "setContext",
       "mcpManager.hasServers",
@@ -124,9 +129,13 @@ export class McpTreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
     }
 
     if (element instanceof SettingsGroupItem) {
-      return SETTING_DEFINITIONS.map(
+      const items: (SettingItem | ClaudeCodeSettingItem)[] = SETTING_DEFINITIONS.map(
         (def) => new SettingItem(def.key, def.label, String(this.cachedSettings[def.key])),
       );
+      for (const def of CLAUDE_CODE_SETTING_DEFINITIONS) {
+        items.push(new ClaudeCodeSettingItem(def.key, def.label, String(this.cachedClaudeCodeSettings[def.key])));
+      }
+      return items;
     }
 
     if (element instanceof McpGroupItem) {
@@ -146,7 +155,7 @@ export class McpTreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
       }
     }
 
-    items.push(new SettingsGroupItem(SETTING_DEFINITIONS.length));
+    items.push(new SettingsGroupItem(SETTING_DEFINITIONS.length + CLAUDE_CODE_SETTING_DEFINITIONS.length));
     return items;
   }
 

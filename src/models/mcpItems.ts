@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { McpServerEntry, McpScope, HealthStatus, HealthCheckResult, McpManagerSettings, isStdioConfig, isHttpConfig } from "../types";
+import { McpServerEntry, McpScope, HealthStatus, HealthCheckResult, McpManagerSettings, ClaudeCodeSettings, isStdioConfig, isHttpConfig } from "../types";
 
 /** Group header in the TreeView ("Project MCPs", "Global MCPs", etc.) */
 export class McpGroupItem extends vscode.TreeItem {
@@ -248,6 +248,25 @@ export class SettingItem extends vscode.TreeItem {
     this.command = {
       command: "mcpManager.editSetting",
       title: "Edit Setting",
+      arguments: [settingKey],
+    };
+  }
+}
+
+/** Individual Claude Code setting entry, click to edit */
+export class ClaudeCodeSettingItem extends vscode.TreeItem {
+  constructor(
+    public readonly settingKey: keyof ClaudeCodeSettings,
+    label: string,
+    currentValue: string,
+  ) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = "claudeCodeSettingItem";
+    this.description = currentValue;
+    this.iconPath = new vscode.ThemeIcon("symbol-variable");
+    this.command = {
+      command: "mcpManager.editClaudeCodeSetting",
+      title: "Edit Claude Code Setting",
       arguments: [settingKey],
     };
   }
