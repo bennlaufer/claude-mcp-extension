@@ -252,16 +252,23 @@ export class ConfigService {
             ? path.join(os.homedir(), installation.installPath.slice(1))
             : installation.installPath;
 
-          // Filter: only project plugins matching current workspace
-          // Use ancestor check: show if workspace is at or under the plugin's projectPath
+          // Filter: project plugins must match current workspace (when a workspace is open)
+          // If no workspace is open, still show project plugins whose projectPath is the
+          // home directory (they're effectively global).
           if (installation.scope === "project") {
-            if (!workspaceRoot || !installation.projectPath) {
+            if (!installation.projectPath) {
               continue;
             }
-            const normalizedProject = installation.projectPath.endsWith("/")
-              ? installation.projectPath
-              : installation.projectPath + "/";
-            if (workspaceRoot !== installation.projectPath && !workspaceRoot.startsWith(normalizedProject)) {
+            const isHomeScoped = installation.projectPath === os.homedir();
+            if (workspaceRoot) {
+              const normalizedProject = installation.projectPath.endsWith(path.sep)
+                ? installation.projectPath
+                : installation.projectPath + path.sep;
+              if (workspaceRoot !== installation.projectPath && !workspaceRoot.startsWith(normalizedProject)) {
+                continue;
+              }
+            } else if (!isHomeScoped) {
+              // No workspace open and plugin is scoped to a specific project — skip
               continue;
             }
           }
@@ -289,6 +296,9 @@ export class ConfigService {
           // which means they apply broadly and should show as global.
           let scope: McpScope;
           if (installation.scope === "global") {
+            scope = "user";
+          } else if (installation.projectPath === os.homedir()) {
+            // Home-scoped project plugins are effectively global
             scope = "user";
           } else if (installation.projectPath && workspaceRoot && installation.projectPath !== workspaceRoot) {
             scope = "user";

@@ -119,3 +119,92 @@ export function isStdioConfig(config: McpServerConfig): config is StdioServerCon
 export function isHttpConfig(config: McpServerConfig): config is HttpServerConfig {
   return "url" in config;
 }
+
+// --- Extension settings types ---
+
+/** All extension settings with their types */
+export interface McpManagerSettings {
+  autoHealthCheck: "none" | "httpOnly" | "all";
+  healthCheckTimeoutMs: number;
+}
+
+/** Default values for all settings */
+export const SETTINGS_DEFAULTS: McpManagerSettings = {
+  autoHealthCheck: "all",
+  healthCheckTimeoutMs: 15000,
+};
+
+/** Metadata for rendering a setting in the TreeView */
+export interface SettingDefinition<K extends keyof McpManagerSettings = keyof McpManagerSettings> {
+  key: K;
+  label: string;
+  description: string;
+  type: "enum" | "number";
+  options?: { label: string; description: string }[];
+  min?: number;
+  max?: number;
+}
+
+/** Registry of all setting definitions (used by UI layer) */
+export const SETTING_DEFINITIONS: SettingDefinition[] = [
+  {
+    key: "autoHealthCheck",
+    label: "Auto Health Check",
+    description: "Which servers to auto-check on refresh",
+    type: "enum",
+    options: [
+      { label: "all", description: "Auto-check all servers on refresh" },
+      { label: "httpOnly", description: "Auto-check HTTP servers only" },
+      { label: "none", description: "No automatic health checks" },
+    ],
+  },
+  {
+    key: "healthCheckTimeoutMs",
+    label: "Health Check Timeout",
+    description: "Timeout for deep health checks (ms)",
+    type: "number",
+    min: 1000,
+    max: 120000,
+  },
+];
+
+// --- Health check types ---
+
+export enum HealthStatus {
+  /** Not yet checked */
+  Unknown = "unknown",
+  /** Currently running a check */
+  Checking = "checking",
+  /** Tier 1 stdio: command binary found on PATH */
+  BinaryFound = "binary_found",
+  /** Tier 1 stdio: command binary NOT found on PATH */
+  CommandNotFound = "command_not_found",
+  /** Tier 1 HTTP: endpoint responded to probe */
+  Reachable = "reachable",
+  /** Tier 1 HTTP: endpoint did not respond */
+  Unreachable = "unreachable",
+  /** Tier 2: full MCP handshake + ping succeeded */
+  Healthy = "healthy",
+  /** Tier 2: MCP connection established but ping failed or server error */
+  Degraded = "degraded",
+  /** Tier 2: authentication/authorization failure (HTTP 401/403) */
+  AuthFailed = "auth_failed",
+  /** Tier 2: connection failed for other reasons */
+  Error = "error",
+}
+
+export interface HealthCheckResult {
+  status: HealthStatus;
+  /** Time the check took in milliseconds */
+  latencyMs?: number;
+  /** Number of tools the server exposes (from Tier 2 listTools) */
+  toolCount?: number;
+  /** Error message if status is error/degraded/auth_failed */
+  error?: string;
+  /** Server name+version from MCP initialize response */
+  serverInfo?: { name: string; version: string };
+  /** Timestamp when this check was performed */
+  checkedAt: Date;
+  /** Which tier produced this result */
+  tier: 1 | 2;
+}

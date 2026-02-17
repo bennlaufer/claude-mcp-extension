@@ -60,12 +60,35 @@
         "title": "Edit Config File",
         "icon": "$(edit)",
         "category": "MCP Manager"
+      },
+      {
+        "command": "mcpManager.checkHealth",
+        "title": "Check Health",
+        "icon": "$(heart)",
+        "category": "MCP Manager"
+      },
+      {
+        "command": "mcpManager.checkAllHealth",
+        "title": "Check All Health",
+        "icon": "$(pulse)",
+        "category": "MCP Manager"
+      },
+      {
+        "command": "mcpManager.editSetting",
+        "title": "Edit Setting",
+        "icon": "$(edit)",
+        "category": "MCP Manager"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "mcpManager.refresh",
+          "when": "view == mcpServersView",
+          "group": "navigation"
+        },
+        {
+          "command": "mcpManager.checkAllHealth",
           "when": "view == mcpServersView",
           "group": "navigation"
         }
@@ -95,6 +118,21 @@
           "command": "mcpManager.editConfig",
           "when": "view == mcpServersView && viewItem =~ /^mcpServer\\./",
           "group": "2_config"
+        },
+        {
+          "command": "mcpManager.checkHealth",
+          "when": "view == mcpServersView && viewItem == mcpServer.enabled",
+          "group": "inline"
+        },
+        {
+          "command": "mcpManager.checkHealth",
+          "when": "view == mcpServersView && viewItem == mcpServer.enabled",
+          "group": "3_health"
+        },
+        {
+          "command": "mcpManager.editSetting",
+          "when": "view == mcpServersView && viewItem == settingItem",
+          "group": "inline"
         }
       ]
     }
@@ -103,13 +141,22 @@
     "vscode:prepublish": "npm run compile",
     "compile": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.80.0",
+    "@types/which": "^3.0.4",
     "esbuild": "^0.25.0",
     "eslint": "^9.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "which": "^4.0.0",
+    "zod": "^3.25.76"
   }
 }
