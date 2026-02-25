@@ -1,6 +1,6 @@
 # MCP Manager for VS Code — Product Requirements Document
 
-## Version: 2.0 (MVP + Plugin Integration + Health Checks + Settings)
+## Version: 2.1 (MVP + Plugin Integration + Health Checks + Settings + Sorting)
 
 ## Problem Statement
 
@@ -69,6 +69,7 @@ Claude Code uses MCP (Model Context Protocol) servers configured across multiple
 | FR-30 | Edit extension settings via QuickPick (enum) or InputBox (number) from context menu | P1 | Done |
 | FR-31 | Claude Code ENABLE_TOOL_SEARCH env var management via TreeView setting (auto/true/false) | P1 | Done |
 | FR-32 | Settings persistence in `~/.claude/mcp-manager-settings.json` (extension) and `~/.claude/settings.json` env map (Claude Code) | P1 | Done |
+| FR-33 | Sort servers within each scope group by health status priority (healthy first, errors last) with alphabetical tiebreaking | P1 | Done |
 
 ## Config File Locations
 
@@ -135,4 +136,5 @@ Dispatch order in `toggleServer()`: managed → warn; `pluginId` present → Str
 - Tier 2 health checks correctly identify healthy, degraded, and erroring servers
 - Health status icons and descriptions update progressively as checks complete
 - Settings are editable from the sidebar and persist across sessions
-- 199 tests pass across 6 test files with full coverage of all services, models, and providers
+- Servers within each scope group are sorted by health status (healthy on top, errors on bottom), re-sorting as health check results arrive
+- 206 tests pass across 6 test files with full coverage of all services, models, and providers
