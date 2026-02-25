@@ -1,0 +1,16 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="256" height="256" rx="24" fill="#1a1a2e"/>
+  <!-- Connection lines -->
+  <line x1="85" y1="95" x2="128" y2="170" stroke="#6366f1" stroke-width="6" stroke-linecap="round"/>
+  <line x1="171" y1="95" x2="128" y2="170" stroke="#6366f1" stroke-width="6" stroke-linecap="round"/>
+  <line x1="85" y1="95" x2="171" y2="95" stroke="#6366f1" stroke-width="6" stroke-linecap="round"/>
+  <!-- Nodes -->
+  <circle cx="85" cy="95" r="16" fill="#818cf8"/>
+  <circle cx="171" cy="95" r="16" fill="#818cf8"/>
+  <circle cx="128" cy="170" r="16" fill="#818cf8"/>
+  <!-- Inner dots -->
+  <circle cx="85" cy="95" r="7" fill="#e0e7ff"/>
+  <circle cx="171" cy="95" r="7" fill="#e0e7ff"/>
+  <circle cx="128" cy="170" r="7" fill="#e0e7ff"/>
+</svg>

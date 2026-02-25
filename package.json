@@ -1,9 +1,28 @@
 {
   "name": "mcp-manager",
-  "displayName": "MCP Manager",
+  "displayName": "MCP Manager for Claude Code",
   "description": "Manage Claude Code MCP server configurations from VS Code sidebar",
   "version": "0.1.0",
-  "publisher": "claritas",
+  "publisher": "benlaufer",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benlaufer/claude-mcp-extension"
+  },
+  "homepage": "https://github.com/benlaufer/claude-mcp-extension#readme",
+  "bugs": {
+    "url": "https://github.com/benlaufer/claude-mcp-extension/issues"
+  },
+  "keywords": [
+    "mcp",
+    "claude",
+    "claude-code",
+    "model-context-protocol",
+    "anthropic",
+    "ai",
+    "mcp-server"
+  ],
   "engines": {
     "vscode": "^1.80.0"
   },

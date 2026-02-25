@@ -1,16 +1,17 @@
 # MCP Manager for VS Code — Product Requirements Document
 
-## Version: 1.1 (MVP + Plugin Integration)
+## Version: 2.0 (MVP + Plugin Integration + Health Checks + Settings)
 
 ## Problem Statement
 
-Claude Code uses MCP (Model Context Protocol) servers configured across multiple JSON files and installed plugins, but provides no GUI to manage them. Users must manually edit JSON to enable/disable servers and plugins, which is error-prone and tedious. There is no native `disabled` flag in the MCP config schema, and plugin toggles require knowing the `enabledPlugins` map format.
+Claude Code uses MCP (Model Context Protocol) servers configured across multiple JSON files and installed plugins, but provides no GUI to manage them. Users must manually edit JSON to enable/disable servers and plugins, which is error-prone and tedious. There is no native `disabled` flag in the MCP config schema, and plugin toggles require knowing the `enabledPlugins` map format. Additionally, there is no visibility into server health — users have no way to know if a configured server is actually reachable or functional without trial and error.
 
 ## Target Users
 
 - Developers using Claude Code in VS Code who have multiple MCP servers configured
 - Teams sharing project-level MCP configs via `.mcp.json` who want personal toggle preferences
 - Users with Claude Code plugins (e.g., Playwright, Supabase, GitHub) that provide MCP servers
+- Users who want to monitor server health and diagnose connectivity issues
 
 ## Goals
 
@@ -19,6 +20,8 @@ Claude Code uses MCP (Model Context Protocol) servers configured across multiple
 3. Avoid modifying git-tracked `.mcp.json` for personal toggle preferences
 4. Preserve server configurations non-destructively (no data loss on disable)
 5. Display and toggle plugin-provided MCP servers alongside hand-configured ones
+6. Provide health check visibility — show whether servers are reachable, healthy, or broken
+7. Allow users to manage extension and Claude Code settings directly from the sidebar
 
 ## Non-Goals (MVP)
 
@@ -52,6 +55,20 @@ Claude Code uses MCP (Model Context Protocol) servers configured across multiple
 | FR-16 | Show plugin ID in tooltip for plugin-sourced servers | P1 | Done |
 | FR-17 | Deduplicate plugin installations to avoid showing the same plugin servers multiple times | P1 | Done |
 | FR-18 | Handle both v1 and v2 plugin registry formats defensively | P1 | Done |
+| FR-19 | Tier 1 health checks: auto-run on refresh — binary existence check (stdio) and endpoint reachability (HTTP) | P0 | Done |
+| FR-20 | Tier 2 health checks: user-initiated deep check — full MCP SDK handshake with ping, tool listing, and server info | P0 | Done |
+| FR-21 | Health-aware icons on server items (pass-filled, warning, error, loading~spin, etc.) | P0 | Done |
+| FR-22 | Health status and latency in server description text | P1 | Done |
+| FR-23 | Rich markdown tooltip with full health details (status, latency, tool count, server version, error, timestamp) | P1 | Done |
+| FR-24 | "Check Health" context menu action for single enabled server (Tier 2) | P1 | Done |
+| FR-25 | "Check All Health" toolbar button for deep-checking all enabled servers with progress notification | P1 | Done |
+| FR-26 | Health check result caching with 5-minute default expiry | P1 | Done |
+| FR-27 | Configurable auto health check mode: "none", "httpOnly", "all" | P1 | Done |
+| FR-28 | Configurable health check timeout (1s–120s, default 15s) | P1 | Done |
+| FR-29 | Settings group in TreeView — collapsible section showing extension and Claude Code settings | P1 | Done |
+| FR-30 | Edit extension settings via QuickPick (enum) or InputBox (number) from context menu | P1 | Done |
+| FR-31 | Claude Code ENABLE_TOOL_SEARCH env var management via TreeView setting (auto/true/false) | P1 | Done |
+| FR-32 | Settings persistence in `~/.claude/mcp-manager-settings.json` (extension) and `~/.claude/settings.json` env map (Claude Code) | P1 | Done |
 
 ## Config File Locations
 
@@ -65,6 +82,8 @@ Claude Code uses MCP (Model Context Protocol) servers configured across multiple
 | Plugin registry | `~/.claude/plugins/installed_plugins.json` | Read-only |
 | Plugin toggle state | `~/.claude/settings.json` → `enabledPlugins` | Yes |
 | Plugin MCP config | `{pluginInstallPath}/.mcp.json` | Read-only |
+| Extension settings | `~/.claude/mcp-manager-settings.json` | Yes |
+| Claude Code env vars | `~/.claude/settings.json` → `env` | Yes |
 
 ## Toggle Strategies
 
@@ -76,6 +95,18 @@ Claude Code uses MCP (Model Context Protocol) servers configured across multiple
 
 Dispatch order in `toggleServer()`: managed → warn; `pluginId` present → Strategy C; project scope → Strategy B; user/local → Strategy A.
 
+## Health Check Architecture
+
+| Tier | Trigger | Speed | Method | Statuses |
+|------|---------|-------|--------|----------|
+| **Tier 1** | Auto on refresh | Fast (1–5s) | `which` (stdio), HEAD request (HTTP) | BinaryFound, CommandNotFound, Reachable, Unreachable, AuthFailed |
+| **Tier 2** | User-initiated | Slower (2–15s) | MCP SDK Client: connect → ping → listTools | Healthy, Degraded, Error + all Tier 1 statuses |
+
+- Results cached by `name:scope` key, 5-minute expiry
+- Progressive UI updates — each server updates independently as its check completes
+- Tier 2 uses `vscode.window.withProgress` for "Check All Health" feedback
+- Error classification: 401/403 → AuthFailed, ENOENT → CommandNotFound, ECONNREFUSED → Unreachable
+
 ## Technical Constraints
 
 - VS Code engine `^1.80.0` (required for `TreeItemCheckboxState`)
@@ -83,9 +114,11 @@ Dispatch order in `toggleServer()`: managed → warn; `pluginId` present → Str
 - Must set `manageCheckboxStateManually: true` on TreeView
 - No hot-reload in Claude Code — must prompt user to restart
 - JSON writes must preserve all existing keys (read-modify-write pattern)
-- `~/.claude/settings.json` is shared (contains `permissions`, `enabledPlugins`, etc.) — must merge carefully
+- `~/.claude/settings.json` is shared (contains `permissions`, `enabledPlugins`, `env`, etc.) — must merge carefully
 - Plugin `installPath` may use `~` prefix — must expand to `os.homedir()`
 - Plugin `.mcp.json` may use wrapped (`{ mcpServers: {...} }`) or flat format — handle both
+- esbuild CJS bundler; `@modelcontextprotocol/sdk/client/sse.js` must be external (top-level await breaks CJS)
+- MCP SDK `Client` close may throw — must be caught gracefully in health checks
 
 ## Success Criteria
 
@@ -98,9 +131,8 @@ Dispatch order in `toggleServer()`: managed → warn; `pluginId` present → Str
 - Toggling a plugin server updates `~/.claude/settings.json` without clobbering other keys
 - Non-MCP plugins do not appear in the tree
 - One broken plugin entry does not prevent other plugins from loading
-
-## Plans & Research
-
-Detailed research and implementation plans are stored in Claude global settings:
-- **Research**: `~/.claude/plans/research/plugin-toggle-integration-research.md`
-- **Implementation**: `~/.claude/plans/implementation/plugin-toggle-integration-implementation.md`
+- Tier 1 health checks complete within 5 seconds of refresh
+- Tier 2 health checks correctly identify healthy, degraded, and erroring servers
+- Health status icons and descriptions update progressively as checks complete
+- Settings are editable from the sidebar and persist across sessions
+- 199 tests pass across 6 test files with full coverage of all services, models, and providers
