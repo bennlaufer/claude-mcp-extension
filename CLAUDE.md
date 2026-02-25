@@ -14,7 +14,7 @@ src/
 │   └── mcpItems.test.ts                  # 74 tests
 ├── providers/
 │   ├── mcpTreeDataProvider.ts            # TreeDataProvider + health check orchestration
-│   └── mcpTreeDataProvider.test.ts       # 32 tests
+│   └── mcpTreeDataProvider.test.ts       # 37 tests
 └── services/
     ├── configService.ts                  # Read/write config files, toggle logic (Strategies A/B/C)
     ├── settingsService.ts                # Extension settings persistence
@@ -23,7 +23,7 @@ src/
     ├── claudeCodeSettingsService.test.ts # 13 tests
     ├── healthCheckService.ts             # Two-tier health check system
     └── healthCheckService.test.ts        # 57 tests
-src/types.test.ts                         # 15 tests
+src/types.test.ts                         # 17 tests
 ```
 
 ### Config Files
@@ -49,6 +49,7 @@ Two-tier hybrid architecture:
 - **Health statuses** (10): Unknown, BinaryFound, CommandNotFound, Reachable, Unreachable, AuthFailed, Checking, Healthy, Degraded, Error.
 - **Error classification** (Tier 2): 401/403 → AuthFailed, ENOENT → CommandNotFound, ECONNREFUSED → Unreachable.
 - **UI integration**: Health-aware icons (pass-filled, warning, error, loading~spin), status in description, full details in rich markdown tooltip.
+- **Sort order**: Servers within each scope group are sorted by health priority (healthy/reachable first → checking → unknown → error/offline), with alphabetical tiebreaking. Priority defined by `HEALTH_SORT_PRIORITY` constant in `types.ts` (`Record<HealthStatus, number>` ensures compile-time exhaustiveness). Servers with no health result yet sort as "unknown" priority via `HEALTH_SORT_PRIORITY_DEFAULT`.
 
 ### Settings
 Two categories displayed in a collapsible "Settings" group in the tree:
@@ -86,9 +87,9 @@ mcp-manager (activity bar)
     ├── Managed MCPs (McpGroupItem) [read-only, no checkboxes]
     │   └── ...
     └── Settings (SettingsGroupItem) [collapsed by default]
+        ├── Tool Search Mode (ClaudeCodeSettingItem)
         ├── Auto Health Check (SettingItem)
-        ├── Health Check Timeout (SettingItem)
-        └── Tool Search Mode (ClaudeCodeSettingItem)
+        └── Health Check Timeout (SettingItem)
 ```
 
 ### Plugin Integration
@@ -119,7 +120,7 @@ mcp-manager (activity bar)
 
 ### Testing
 - **Framework**: Vitest v4 with `globals: true`, node environment
-- **199 tests** across 6 test files
+- **206 tests** across 6 test files
 - **Critical pattern**: `vi.mock` factories are hoisted — variables used inside must be defined via `vi.hoisted()`
 - **Mock constructors**: Use `class MockFoo { ... }` syntax inside `vi.mock()` factories (not `vi.fn().mockImplementation`)
 - **vscode mock**: Class-based mocks for EventEmitter, TreeItem, ThemeIcon, ThemeColor, MarkdownString
