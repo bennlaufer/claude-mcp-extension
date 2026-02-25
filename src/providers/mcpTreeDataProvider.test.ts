@@ -352,6 +352,114 @@ describe("McpTreeDataProvider", () => {
     });
   });
 
+  // ─── Server item sorting ────────────────────────────
+
+  describe("server item sorting", () => {
+    it("sorts healthy servers before error servers", async () => {
+      const errorSrv = makeEntry({ name: "alpha-srv", scope: "user" });
+      const healthySrv = makeEntry({ name: "beta-srv", scope: "user" });
+      mockGetAllServers.mockResolvedValue([errorSrv, healthySrv]);
+      mockCheckTier1.mockImplementation((entry: any) => {
+        if (entry.name === "alpha-srv") return Promise.resolve(makeHealthResult({ status: HealthStatus.Error }));
+        return Promise.resolve(makeHealthResult({ status: HealthStatus.Healthy }));
+      });
+
+      await provider.refresh();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const roots = provider.getChildren();
+      const children = provider.getChildren(roots[0]) as McpServerItem[];
+      expect(children[0].entry.name).toBe("beta-srv");
+      expect(children[1].entry.name).toBe("alpha-srv");
+    });
+
+    it("sorts alphabetically within same health priority", async () => {
+      const srvC = makeEntry({ name: "charlie", scope: "user" });
+      const srvA = makeEntry({ name: "alpha", scope: "user" });
+      const srvB = makeEntry({ name: "bravo", scope: "user" });
+      mockGetAllServers.mockResolvedValue([srvC, srvA, srvB]);
+      mockCheckTier1.mockResolvedValue(makeHealthResult({ status: HealthStatus.BinaryFound }));
+
+      await provider.refresh();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const roots = provider.getChildren();
+      const children = provider.getChildren(roots[0]) as McpServerItem[];
+      expect(children.map((c) => c.entry.name)).toEqual(["alpha", "bravo", "charlie"]);
+    });
+
+    it("sorts by full priority: healthy > unknown > error", async () => {
+      const errorSrv = makeEntry({ name: "error-srv", scope: "user" });
+      const unknownSrv = makeEntry({ name: "unknown-srv", scope: "user" });
+      const healthySrv = makeEntry({ name: "healthy-srv", scope: "user" });
+      mockGetAllServers.mockResolvedValue([errorSrv, unknownSrv, healthySrv]);
+      mockCheckTier1.mockImplementation((entry: any) => {
+        if (entry.name === "error-srv") return Promise.resolve(makeHealthResult({ status: HealthStatus.Error }));
+        if (entry.name === "unknown-srv") return Promise.resolve(makeHealthResult({ status: HealthStatus.Unknown }));
+        return Promise.resolve(makeHealthResult({ status: HealthStatus.Healthy }));
+      });
+
+      await provider.refresh();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const roots = provider.getChildren();
+      const children = provider.getChildren(roots[0]) as McpServerItem[];
+      expect(children.map((c) => c.entry.name)).toEqual(["healthy-srv", "unknown-srv", "error-srv"]);
+    });
+
+    it("servers with no health result sort as unknown priority", async () => {
+      const noHealthSrv = makeEntry({ name: "no-health", scope: "user" });
+      const healthySrv = makeEntry({ name: "healthy-srv", scope: "user" });
+      const errorSrv = makeEntry({ name: "error-srv", scope: "user" });
+      mockGetAllServers.mockResolvedValue([noHealthSrv, healthySrv, errorSrv]);
+
+      // Only return results for healthy and error servers, not for no-health
+      mockCheckTier1.mockImplementation((entry: any) => {
+        if (entry.name === "healthy-srv") return Promise.resolve(makeHealthResult({ status: HealthStatus.Healthy }));
+        if (entry.name === "error-srv") return Promise.resolve(makeHealthResult({ status: HealthStatus.Error }));
+        // no-health will never resolve a Tier 1 result into the map
+        return Promise.resolve(makeHealthResult({ status: HealthStatus.Unknown }));
+      });
+
+      await provider.refresh();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const roots = provider.getChildren();
+      const children = provider.getChildren(roots[0]) as McpServerItem[];
+      // healthy (0) < no-health/unknown (2) < error (3)
+      expect(children[0].entry.name).toBe("healthy-srv");
+      expect(children[1].entry.name).toBe("no-health");
+      expect(children[2].entry.name).toBe("error-srv");
+    });
+
+    it("sorting works independently per scope group", async () => {
+      const userError = makeEntry({ name: "alpha", scope: "user" });
+      const userHealthy = makeEntry({ name: "beta", scope: "user" });
+      const projectError = makeEntry({ name: "gamma", scope: "project" });
+      const projectHealthy = makeEntry({ name: "delta", scope: "project" });
+      mockGetAllServers.mockResolvedValue([userError, userHealthy, projectError, projectHealthy]);
+      mockCheckTier1.mockImplementation((entry: any) => {
+        if (entry.name === "alpha" || entry.name === "gamma") {
+          return Promise.resolve(makeHealthResult({ status: HealthStatus.Error }));
+        }
+        return Promise.resolve(makeHealthResult({ status: HealthStatus.Healthy }));
+      });
+
+      await provider.refresh();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const roots = provider.getChildren();
+      const projectGroup = roots.find((r) => (r as McpGroupItem).scope === "project")!;
+      const userGroup = roots.find((r) => (r as McpGroupItem).scope === "user")!;
+
+      const projectChildren = provider.getChildren(projectGroup) as McpServerItem[];
+      expect(projectChildren.map((c) => c.entry.name)).toEqual(["delta", "gamma"]);
+
+      const userChildren = provider.getChildren(userGroup) as McpServerItem[];
+      expect(userChildren.map((c) => c.entry.name)).toEqual(["beta", "alpha"]);
+    });
+  });
+
   // ─── Health data in server items ──────────────────────
 
   describe("health data in server items", () => {
@@ -579,9 +687,9 @@ describe("McpTreeDataProvider", () => {
       const children = provider.getChildren(settingsGroup);
 
       expect(children).toHaveLength(3);
-      expect(children[0]).toBeInstanceOf(SettingItem);
+      expect(children[0]).toBeInstanceOf(ClaudeCodeSettingItem);
       expect(children[1]).toBeInstanceOf(SettingItem);
-      expect(children[2]).toBeInstanceOf(ClaudeCodeSettingItem);
+      expect(children[2]).toBeInstanceOf(SettingItem);
     });
 
     it("SettingItem descriptions reflect cached settings values", async () => {

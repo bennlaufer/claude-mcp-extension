@@ -227,6 +227,23 @@ export enum HealthStatus {
   Error = "error",
 }
 
+/** Sort priority for health statuses: 0=good, 1=checking, 2=unknown, 3=error/offline */
+export const HEALTH_SORT_PRIORITY: Record<HealthStatus, number> = {
+  [HealthStatus.Healthy]: 0,
+  [HealthStatus.BinaryFound]: 0,
+  [HealthStatus.Reachable]: 0,
+  [HealthStatus.Checking]: 1,
+  [HealthStatus.Unknown]: 2,
+  [HealthStatus.Degraded]: 3,
+  [HealthStatus.CommandNotFound]: 3,
+  [HealthStatus.Unreachable]: 3,
+  [HealthStatus.AuthFailed]: 3,
+  [HealthStatus.Error]: 3,
+};
+
+/** Default sort priority for servers with no health result */
+export const HEALTH_SORT_PRIORITY_DEFAULT = 2;
+
 export interface HealthCheckResult {
   status: HealthStatus;
   /** Time the check took in milliseconds */

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { McpServerEntry, McpScope, HealthStatus, HealthCheckResult, McpManagerSettings, SETTINGS_DEFAULTS, SETTING_DEFINITIONS, ClaudeCodeSettings, CLAUDE_CODE_SETTINGS_DEFAULTS, CLAUDE_CODE_SETTING_DEFINITIONS, isHttpConfig } from "../types";
+import { McpServerEntry, McpScope, HealthStatus, HealthCheckResult, McpManagerSettings, SETTINGS_DEFAULTS, SETTING_DEFINITIONS, ClaudeCodeSettings, CLAUDE_CODE_SETTINGS_DEFAULTS, CLAUDE_CODE_SETTING_DEFINITIONS, isHttpConfig, HEALTH_SORT_PRIORITY, HEALTH_SORT_PRIORITY_DEFAULT } from "../types";
 import { McpGroupItem, McpServerItem, SettingsGroupItem, SettingItem, ClaudeCodeSettingItem } from "../models/mcpItems";
 import { ConfigService } from "../services/configService";
 import { HealthCheckService } from "../services/healthCheckService";
@@ -129,11 +129,11 @@ export class McpTreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
     }
 
     if (element instanceof SettingsGroupItem) {
-      const items: (SettingItem | ClaudeCodeSettingItem)[] = SETTING_DEFINITIONS.map(
-        (def) => new SettingItem(def.key, def.label, String(this.cachedSettings[def.key])),
+      const items: (SettingItem | ClaudeCodeSettingItem)[] = CLAUDE_CODE_SETTING_DEFINITIONS.map(
+        (def) => new ClaudeCodeSettingItem(def.key, def.label, String(this.cachedClaudeCodeSettings[def.key])),
       );
-      for (const def of CLAUDE_CODE_SETTING_DEFINITIONS) {
-        items.push(new ClaudeCodeSettingItem(def.key, def.label, String(this.cachedClaudeCodeSettings[def.key])));
+      for (const def of SETTING_DEFINITIONS) {
+        items.push(new SettingItem(def.key, def.label, String(this.cachedSettings[def.key])));
       }
       return items;
     }
@@ -165,7 +165,17 @@ export class McpTreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
       .map((s) => new McpServerItem(
         s,
         this.healthResults.get(this.healthService.cacheKey(s)),
-      ));
+      ))
+      .sort((a, b) => {
+        const pa = a.healthResult
+          ? HEALTH_SORT_PRIORITY[a.healthResult.status]
+          : HEALTH_SORT_PRIORITY_DEFAULT;
+        const pb = b.healthResult
+          ? HEALTH_SORT_PRIORITY[b.healthResult.status]
+          : HEALTH_SORT_PRIORITY_DEFAULT;
+        if (pa !== pb) return pa - pb;
+        return a.entry.name.localeCompare(b.entry.name);
+      });
   }
 
   /** Find the McpServerEntry for a given McpServerItem */

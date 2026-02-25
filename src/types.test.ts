@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   HealthStatus,
   HealthCheckResult,
+  HEALTH_SORT_PRIORITY,
+  HEALTH_SORT_PRIORITY_DEFAULT,
   isStdioConfig,
   isHttpConfig,
   StdioServerConfig,
@@ -132,6 +134,18 @@ describe("isHttpConfig type guard", () => {
   it("returns false for stdio configs", () => {
     const config: StdioServerConfig = { command: "node" };
     expect(isHttpConfig(config)).toBe(false);
+  });
+});
+
+describe("HEALTH_SORT_PRIORITY", () => {
+  it("maps every HealthStatus enum value", () => {
+    const enumValues = Object.values(HealthStatus);
+    const mappedKeys = Object.keys(HEALTH_SORT_PRIORITY);
+    expect(mappedKeys.sort()).toEqual(enumValues.sort());
+  });
+
+  it("has default priority of 2 (unknown tier)", () => {
+    expect(HEALTH_SORT_PRIORITY_DEFAULT).toBe(2);
   });
 });
 
