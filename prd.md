@@ -32,6 +32,7 @@ Claude Code uses MCP (Model Context Protocol) servers configured across multiple
 - Status bar indicators
 - Displaying non-MCP plugins (plugins that only provide hooks, skills, agents, LSP, or output styles)
 - Per-server plugin toggle granularity (toggling is at the plugin level — all servers from a plugin toggle together)
+- Displaying cloud-hosted platform integrations (e.g., Microsoft 365, Atlassian) — these are configured at the Anthropic account level, not in any local config file, so the extension has no local representation to read or toggle
 
 ## Functional Requirements
 
@@ -85,6 +86,7 @@ Claude Code uses MCP (Model Context Protocol) servers configured across multiple
 | Plugin MCP config | `{pluginInstallPath}/.mcp.json` | Read-only |
 | Extension settings | `~/.claude/mcp-manager-settings.json` | Yes |
 | Claude Code env vars | `~/.claude/settings.json` → `env` | Yes |
+| Platform integrations | Anthropic account-level (no local file) | N/A — not covered by this extension |
 
 ## Toggle Strategies
 
